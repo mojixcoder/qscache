@@ -148,8 +148,10 @@ Now lets look at how everything is working by detail.
 
  - **exception_class:** This the exception that we raise when object is not found in `cache_manager.get()` method. Defaults to `Http404`. But if you are using `rest_framework` you may want to raise `rest_framework.exceptions.NotFound` instead of `Http404`.
 
-Here are `BaseCacheManager` that you may want to override.
+Here are `BaseCacheManager` that you may want to override.  
 Now lets look at your model `cache_manager` methods.
+
+## BaseCacheManager Instance Options
 
  - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. But we store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.
 
