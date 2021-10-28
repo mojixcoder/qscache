@@ -128,9 +128,15 @@ Now lets look at how everything is working by detail.
 
  - **model:** This is the only required field that you should specify in your model cache manager. We use this model to query database and fetch data.
  
- - **cache_key:** The default value is `None`. If it's `None` we use the model lowercase class name. if you want to override it just use a string as cache key. We use this cache key as  our cache key separator from other model cache keys. So make sure it's unique. Defaults to `None`.
+ - **cache_key:** The default value is `None`. If it's `None` we use the model lowercase class name. if you want to override it just use a string as cache key. We use this cache key as  our cache key separator from other model cache keys. So make sure it's unique. Defaults to `None`.  
+
+
 	 1. `cache_key` is our list cache key. `cache_manager.all()` will be stored in `cache_key`.
-	 2. `{cache_key}_{unique_identifier}` is our detail cache key. if your unique identifier is pk(for example 1) then your detail cache key is `{cache_key}_1`. `cache_manager.get()` uses this cache key. your unique identifier can be anything but make sure it's unique so your objects won't be overridden in cache. For example `slug`, `username`, etc.
+
+
+	 2. `{cache_key}_{unique_identifier}` is our detail cache key. if your unique identifier is pk(for example 1) then your detail cache key is `{cache_key}_1`. `cache_manager.get()` uses this cache key. your unique identifier can be anything but make sure it's unique so your objects won't be overridden in cache. For example `slug`, `username`, etc.  
+	 
+	 
 
  - **related_objects:** If your model has foreign keys and you want to use `select_related` in your queries. Just pass a list containing your foreign key field names. Defaults to `None`.
  
@@ -149,15 +155,14 @@ Now lets look at how everything is working by detail.
  - **exception_class:** This the exception that we raise when object is not found in `cache_manager.get()` method. Defaults to `Http404`. But if you are using `rest_framework` you may want to raise `rest_framework.exceptions.NotFound` instead of `Http404`.
 
 Here are `BaseCacheManager` that you may want to override.  
-Now lets look at your model `cache_manager` methods.
 
 ## BaseCacheManager Instance Options
 
- - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. But we store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.
+ - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. But we store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.  
 
-	 1. **suffix: Optional[str] = None** : This suffix is added to the end of `cache_key` if provided. It's useful when you want to store a filtered queryset in cache and you also don't want to override your `cache_manager.all()` queryset.
+	 1. **suffix: Optional[str] = None** : This suffix is added to the end of `cache_key` if provided. It's useful when you want to store a filtered queryset in cache and you also don't want to override your `cache_manager.all()` queryset.  
 
-	 2. **filter_kwargs: Optional[Dict[str, Any]] = None** : If you want to filter your queryset you can use it and pass your filter as a dict. For example `{"name__icontains": "mojix", "is_active": True}` same as Django API. but it's better to use `suffix` and `filter_kwargs` at the same time. Then you can cache your filters when you are using them so much. For example if you have a page that you show all of the active products and you want to cache your active products instead of all of the products. You can do this `product_cache_manager.all(suffix="active", filter_kwargs={"is_active": True})`.  
+	 2. **filter_kwargs: Optional[Dict[str, Any]] = None** : If you want to filter your queryset you can use it and pass your filter as a dict. For example `{"name__icontains": "mojix", "is_active": True}` same as Django API. but it's better to use `suffix` and `filter_kwargs` at the same time. Then you can cache your filters when you are using them so much. For example if you have a page that you show all of the active products and you want to cache your active products instead of all of the products. You can do this `product_cache_manager.all(suffix="active", filter_kwargs={"is_active": True})`.    
 
 
 **Notice:** What if you wanted to filter your queryset without caching it? imagine if it was a simple search that you don't want to cache it. Remember that `cache_manager.all()` returns `Queryset[ModelType]`. So you can use everything on it that you do in Django and you can use it even as your model manager. look that this example below:
