@@ -109,7 +109,7 @@ Now let's see a better example in `rest_framework`:
 		def perform_create(self, serializer):
 			serializer.save()
 
-		@clear_cache_keys(
+		@clear_cache_detail(
 			manager=example_cache_manager, 
 			additional_fields=[example_cache_manager.get_cache_key()],
 		)
