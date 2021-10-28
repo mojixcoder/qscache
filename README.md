@@ -33,7 +33,7 @@ in `models.py`:
 		A simple example Django model like before
 		"""
 	      
-	    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
+		user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
 	    users = models.ManyToManyField(User, related_name="examples")  
 	    is_active = models.BooleanField(default=True)  
 
@@ -109,7 +109,7 @@ Now let's see a better example in `rest_framework`:
 		def perform_create(self, serializer):
 			serializer.save()
 
-		@clear_cache_detail(
+		@clear_cache_keys(
 			manager=example_cache_manager, 
 			additional_fields=[example_cache_manager.get_cache_key()],
 		)
@@ -121,22 +121,31 @@ Now after we create an object we delete our list cache so next time we get our l
 Now you have a cached `ModelViewSet`.
 It was easy, wasn't it?
 
-## Developer Guide
+## BaseCacheManager Options
 
 Now lets look at how everything is working by detail.
 
 
-`BaseCacheManager` options:
-
  - **model:** This is the only required field that you should specify in your model cache manager. We use this model to query database and fetch data.
+ 
  - **cache_key:** The default value is `None`. If it's `None` we use the model lowercase class name. if you want to override it just use a string as cache key. We use this cache key as  our cache key separator from other model cache keys. So make sure it's unique. Defaults to `None`.
 	 1. `cache_key` is our list cache key. `cache_manager.all()` will be stored in `cache_key`.
 	 2. `{cache_key}_{unique_identifier}` is our detail cache key. if your unique identifier is pk(for example 1) then your detail cache key is `{cache_key}_1`. `cache_manager.get()` uses this cache key. your unique identifier can be anything but make sure it's unique so your objects won't be overridden in cache. For example `slug`, `username`, etc.
+
  - **related_objects:** If your model has foreign keys and you want to use `select_related` in your queries. Just pass a list containing your foreign key field names. Defaults to `None`.
+ 
  - **prefetch_related_objects:** if you wanna use `prefetch_related` in your query just add a list containing your many to many fields. Defaults to `None`.
+ 
+ 
  - **use_prefetch_related_for_list:** Your list query can be heavy and you may not need to `prefetch_related` for your list query but you need it for the detail of your objects. If it's True then we use `prefetch_related_objects` for our list query but if not we don't use `prefetch_related_objects` for our list even though it's set we only use it for getting an object not getting list of objects. Defaults to `True`.
+
+
  - **list_timeout:** This is the timeout of your list cache key in seconds. Defaults to 86400 (1 day).
+
+
  - **detail_timeout:**  This is the timeout of your detail cache key in seconds. Defaults to 60 (1 minute).
+
+
  - **exception_class:** This the exception that we raise when object is not found in `cache_manager.get()` method. Defaults to `Http404`. But if you are using `rest_framework` you may want to raise `rest_framework.exceptions.NotFound` instead of `Http404`.
 
 Here are `BaseCacheManager` that you may want to override.
