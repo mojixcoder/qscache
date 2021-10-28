@@ -76,6 +76,50 @@ This is all you need to do. now you are good to use your cache manager.
 		unique_identifier=1,  # pk = 1
 		filter_kwargs={"pk": 1},
 	)
+Now let's see a better example in `rest_framework`:
+
+    from rest_framework.viewsets import ModelViewSet
+
+	from qscache import clear_cache_detail, clear_cache_keys
+	
+	from .models import Example
+	from .cache import example_cache_manager
+	from .serializers import ExampleSerializer
+
+
+	class ExampleViewSet(ModelViewSet):
+	
+		serializer_class = ExampleSerializer
+		http_method_names = ["get", "post", "put"]
+
+		def get_queryset(self):  
+		    example_list = example_cache_manager.all()  
+		    return example_list
+
+		def get_object(self):  
+		    pk = self.kwargs.get(self.lookup_field)  
+		    obj = province_cache_manager.get(
+			    unique_identifier=pk, 	
+			    filter_kwargs={"pk": pk},
+		    )  
+		    self.check_object_permissions(self.request, obj)  
+		    return obj
+		
+		@clear_cache_keys(keys=[example_cache_manager.get_cache_key()])
+		def perform_create(self, serializer):
+			serializer.save()
+
+		@clear_cache_keys(
+			manager=example_cache_manager, 
+			additional_fields=[example_cache_manager.get_cache_key()],
+		)
+		def perform_update(self, serializer): 
+			return serializer.save()
+	
+Here the queries for our `list` and `retrieve` actions will be cached.
+Now after we create an object we delete our list cache so next time we get our list cache will be updated. And after updating an object we delete our list cache key and the object from cache, so next time when we get our list and object they will be updated and cached again.
+Now you have a cached `ModelViewSet`.
+It was easy, wasn't it?
 
 ## Developer Guide
 
