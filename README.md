@@ -1,3 +1,4 @@
+
 # qscache
 
 A package for caching Django querysets with type hinting in mind.
@@ -158,7 +159,7 @@ Here are `BaseCacheManager` that you may want to override.
 
 ## BaseCacheManager Instance Options
 
- - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. But we store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.  
+ - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. We store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.  
 
 	 1. **suffix: Optional[str] = None** : This suffix is added to the end of `cache_key` if provided. It's useful when you want to store a filtered queryset in cache and you also don't want to override your `cache_manager.all()` queryset.  
 
@@ -176,7 +177,20 @@ Here are `BaseCacheManager` that you may want to override.
 	# It's like Model.objects.all().filter(is_active=True)
 	# So it's not stored in cache and feel free to use it
 	cache_manager.all().filter(is_active=True)
-	
+
+ - **get(unique_identifier: Any, filter_kwargs: Dict[str, Any], raise_exception: bool  =  True)  ->  Optional[ModelType]:** This is the equivalent to `Model.objects.get()`. We store it in `f"{cache_key}_{unique_identifier}"` and we fetch it from cache if object was in the cache otherwise sets the object to the cache.  
+
+	 1. **unique_identifier: Any** We try to get object from cache with `unique_identifier`
+	 2. **filter_kwargs: Dict[str, Any]** If the object was not found we try to get object using `filter_kwargs`. Remember your filters should only return one object. So it's better to use pk, slug , etc.
+	 3. **raise_exception: bool  =  True**  If the object was not found raises `exception_class` if it's True otherwise returns **`None`**.  
+
+```  
+pk = 1
+example_object = cache_manager.get(
+	unique_identifier=pk, 
+	filter_kwargs={"pk": pk},
+)
+```
 
 So far so good and easy.
 More coming soon :)
