@@ -33,7 +33,7 @@ in `models.py`:
 		A simple example Django model like before
 		"""
 	      
-		user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
+	    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
 	    users = models.ManyToManyField(User, related_name="examples")  
 	    is_active = models.BooleanField(default=True)  
 
