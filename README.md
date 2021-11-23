@@ -11,7 +11,6 @@ A package for caching Django querysets with type hinting in mind.
 ## Installation
 
     pip install qscache
-    Don't install yet :)
     
 ## Versioning
 This package is young so consider pining it with the exact version of package in production.
