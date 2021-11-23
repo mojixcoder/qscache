@@ -8,6 +8,8 @@ from django.contrib.auth import get_user_model
 
 from django_redis import get_redis_connection
 
+from qscache import clear_cache_keys, clear_cache_detail
+
 from example_app.models import Example
 from example_app.cache import (
     example_cache_manager,
@@ -65,7 +67,7 @@ class ExampleTestCase(TestCase):  # noqa
             unique_identifier=example_object.pk,
             filter_kwargs={"pk": example_object.pk},
         )
-        detail_cache_key = example_cache_manager._get_detail_cache_key(
+        detail_cache_key = example_cache_manager.get_detail_cache_key(
             unique_identifier=example_object.pk
         )
 
@@ -113,7 +115,7 @@ class ExampleTestCase(TestCase):  # noqa
             raise_exception=False,  # if raise_exception is False then we don't raise Http404 instead we return None
         )
 
-        cache_key = example_cache_manager._get_detail_cache_key(
+        cache_key = example_cache_manager.get_detail_cache_key(
             unique_identifier=example_object.pk
         )
 
@@ -139,7 +141,7 @@ class ExampleTestCase(TestCase):  # noqa
                 filter_kwargs=filter_kwargs,
             )
 
-        cache_key = example_cache_manager._get_detail_cache_key(
+        cache_key = example_cache_manager.get_detail_cache_key(
             unique_identifier=example_object.pk
         )
 
@@ -386,17 +388,55 @@ class ExampleTestCase(TestCase):  # noqa
 
         # 1 new query is executed because we don't prefetch_related objects in list query when use_prefetch_related_for_list is False
         self.assertEqual(len(connection.queries), 1)
-        
+
         obj = example_cache_user_prefetch_related_manager.get(
-            unique_identifier=example_object.pk, 
+            unique_identifier=example_object.pk,
             filter_kwargs={"pk": example_object.pk},
         )
-        
+
         reset_queries()
-        
-        
+
         for user in obj.users.all():
             first_name = user.first_name
-            
+
         self.assertEqual(len(connection.queries), 0)
+
+    def test_clear_cache_keys_decorator(self) -> None:
+        example_list = example_cache_manager.all()
+
+        self.assertIn(example_cache_manager.cache_key, cache.keys("*"))
+
+        @clear_cache_keys(keys=[example_cache_manager.cache_key])
+        def create_example_object() -> None:
+            example_object = Example(
+                title="MojixCoder", text="Mojix Coder", number=1010
+            )
+            example_object.save()
+
+        create_example_object()
+
+        # Cache key is removed from cache
+        # So next time when we call .all() cache will be updated
+        self.assertNotIn(example_cache_manager.cache_key, cache.keys("*"))
+
+    def test_clear_cache_detail(self) -> None:
+        example_object = Example(title="MojixCoder", text="Mojix Coder", number=1010)
+        example_object.save()
+
+        example_obj = example_cache_manager.get(
+            unique_identifier=example_object.pk, filter_kwargs={"pk": example_object.pk}
+        )
+
+        cache_key = example_cache_manager.get_detail_cache_key(example_object.pk)
+
+        self.assertIn(cache_key, cache.keys("*"))
+
+        @clear_cache_detail(manager=example_cache_manager)
+        def update_example_object() -> Example:
+            example_object.title = "I am updated"
+            example_object.save()
+            return example_object
         
+        update_example_object()
+
+        self.assertNotIn(cache_key, cache.keys("*"))

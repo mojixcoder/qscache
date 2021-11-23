@@ -29,7 +29,7 @@ class BaseCacheManager(Generic[ModelType]):
     def get_cache_key(self) -> str:
         return self._get_cache_key(self.cache_key)
 
-    def _get_detail_cache_key(self, unique_identifier) -> str:
+    def get_detail_cache_key(self, unique_identifier) -> str:
         detail_cache_key = f"{self.get_cache_key()}_{unique_identifier}"
         return detail_cache_key
 
@@ -165,7 +165,7 @@ class BaseCacheManager(Generic[ModelType]):
                 - Cached object or None if raise_exception=False and object was not found.
         """
         try:
-            cache_key = self._get_detail_cache_key(unique_identifier)
+            cache_key = self.get_detail_cache_key(unique_identifier)
             obj = cache.get(cache_key)
             if obj is not None:
                 return obj

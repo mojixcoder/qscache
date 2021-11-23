@@ -25,7 +25,7 @@ def clear_cache_keys(keys: List[str]):
 
 def clear_cache_detail(
     manager: Type[ManagerType],
-    field_key_identifier: str = "pk",
+    field: str = "pk",
     additional_fields: Optional[List[str]] = None,
 ):
     """
@@ -38,15 +38,13 @@ def clear_cache_detail(
     def clear(func):
         def wrapper(*args, **kwargs):
             obj = func(*args, **kwargs)
-            detail_key = manager._get_detail_cache_key(  # noqa
-                getattr(obj, field_key_identifier)
-            )
+            detail_key = manager.get_detail_cache_key(getattr(obj, field))  # noqa
             if additional_fields is not None:
                 deleted_keys = [detail_key]
                 deleted_keys.append(additional_fields)
                 cache.delete_many(deleted_keys)
             else:
-                cache.delete_many(detail_key)
+                cache.delete(detail_key)
 
         return wrapper
 
