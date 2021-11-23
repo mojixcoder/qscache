@@ -9,7 +9,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="qscache",
-    version="0.2.10",
+    version="0.2.11",
     description="A package to cache Django querysets.s",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -33,7 +33,7 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     ],
-    packages=find_packages(exclude=["venv"]),
+    packages=find_packages(exclude=["venv", ".idea"]),
     install_requires=[
         "Django >= 3.0.12,<4.0.0",
         "django-redis == 5.0",
