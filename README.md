@@ -1,3 +1,4 @@
+
 # qscache
 
 A package for caching Django querysets with type hinting in mind.
@@ -10,6 +11,7 @@ A package for caching Django querysets with type hinting in mind.
 ## Installation
 
     pip install qscache
+    Don't install yet :)
     
 ## Versioning
 This package is young so consider pining it with the exact version of package in production.
@@ -33,7 +35,7 @@ in `models.py`:
 		A simple example Django model like before
 		"""
 	      
-		user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
+	    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
 	    users = models.ManyToManyField(User, related_name="examples")  
 	    is_active = models.BooleanField(default=True)  
 
@@ -76,31 +78,94 @@ This is all you need to do. now you are good to use your cache manager.
 		unique_identifier=1,  # pk = 1
 		filter_kwargs={"pk": 1},
 	)
+Now let's see a better example in `rest_framework`:
 
-## Developer Guide
+    from rest_framework.viewsets import ModelViewSet
+
+	from qscache import clear_cache_detail, clear_cache_keys
+	
+	from .models import Example
+	from .cache import example_cache_manager
+	from .serializers import ExampleSerializer
+
+
+	class ExampleViewSet(ModelViewSet):
+	
+		serializer_class = ExampleSerializer
+		http_method_names = ["get", "post", "put"]
+
+		def get_queryset(self):  
+		    example_list = example_cache_manager.all()  
+		    return example_list
+
+		def get_object(self):  
+		    pk = self.kwargs.get(self.lookup_field)  
+		    obj = province_cache_manager.get(
+			    unique_identifier=pk, 	
+			    filter_kwargs={"pk": pk},
+		    )  
+		    self.check_object_permissions(self.request, obj)  
+		    return obj
+		
+		@clear_cache_keys(keys=[example_cache_manager.get_cache_key()])
+		def perform_create(self, serializer):
+			serializer.save()
+
+		@clear_cache_keys(
+			manager=example_cache_manager, 
+			additional_fields=[example_cache_manager.get_cache_key()],
+		)
+		def perform_update(self, serializer): 
+			return serializer.save()
+	
+Here the queries for our `list` and `retrieve` actions will be cached.
+Now after we create an object we delete our list cache so next time we get our list cache will be updated. And after updating an object we delete our list cache key and the object from cache, so next time when we get our list and object they will be updated and cached again.
+Now you have a cached `ModelViewSet`.
+It was easy, wasn't it?
+
+## BaseCacheManager Options
 
 Now lets look at how everything is working by detail.
 
 
-`BaseCacheManager` options:
-
  - **model:** This is the only required field that you should specify in your model cache manager. We use this model to query database and fetch data.
- - **cache_key:** The default value is `None`. If it's `None` we use the model lowercase class name. if you want to override it just use a string as cache key. We use this cache key as  our cache key separator from other model cache keys. So make sure it's unique. Defaults to `None`.
+ 
+ - **cache_key:** The default value is `None`. If it's `None` we use the model lowercase class name. if you want to override it just use a string as cache key. We use this cache key as  our cache key separator from other model cache keys. So make sure it's unique. Defaults to `None`.  
+
+
 	 1. `cache_key` is our list cache key. `cache_manager.all()` will be stored in `cache_key`.
-	 2. `{cache_key}_{unique_identifier}` is our detail cache key. if your unique identifier is pk(for example 1) then your detail cache key is `{cache_key}_1`. `cache_manager.get()` uses this cache key. your unique identifier can be anything but make sure it's unique so your objects won't be overridden in cache. For example `slug`, `username`, etc.
+
+
+	 2. `{cache_key}_{unique_identifier}` is our detail cache key. if your unique identifier is pk(for example 1) then your detail cache key is `{cache_key}_1`. `cache_manager.get()` uses this cache key. your unique identifier can be anything but make sure it's unique so your objects won't be overridden in cache. For example `slug`, `username`, etc.  
+	 
+	 
+
  - **related_objects:** If your model has foreign keys and you want to use `select_related` in your queries. Just pass a list containing your foreign key field names. Defaults to `None`.
+ 
  - **prefetch_related_objects:** if you wanna use `prefetch_related` in your query just add a list containing your many to many fields. Defaults to `None`.
+ 
+ 
  - **use_prefetch_related_for_list:** Your list query can be heavy and you may not need to `prefetch_related` for your list query but you need it for the detail of your objects. If it's True then we use `prefetch_related_objects` for our list query but if not we don't use `prefetch_related_objects` for our list even though it's set we only use it for getting an object not getting list of objects. Defaults to `True`.
+
+
  - **list_timeout:** This is the timeout of your list cache key in seconds. Defaults to 86400 (1 day).
+
+
  - **detail_timeout:**  This is the timeout of your detail cache key in seconds. Defaults to 60 (1 minute).
+
+
  - **exception_class:** This the exception that we raise when object is not found in `cache_manager.get()` method. Defaults to `Http404`. But if you are using `rest_framework` you may want to raise `rest_framework.exceptions.NotFound` instead of `Http404`.
 
-Here are `BaseCacheManager` that you may want to override.
-Now lets look at your model `cache_manager` methods.
+Here are `BaseCacheManager` that you may want to override.  
 
- - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. But we store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.
-	 1. **suffix: Optional[str] = None** : This suffix is added to the end of `cache_key` if provided. It's useful when you want to store a filtered queryset in cache and you also don't want to override your `cache_manager.all()` queryset.
-	 2. **filter_kwargs: Optional[Dict[str, Any]] = None** : If you want to filter your queryset you can use it and pass your filter as a dict. For example `{"name__icontains": "mojix", "is_active": True}` same as Django API. but it's better to use `suffix` and `filter_kwargs` at the same time. Then you can cache your filters when you are using them so much. For example if you have a page that you show all of the active products and you want to cache your active products instead of all of the products. You can do this `product_cache_manager.all(suffix="active", filter_kwargs={"is_active": True})`.  
+## BaseCacheManager Instance Options
+
+ - **all(suffix: Optional[str] = None, filter_kwargs: Optional[Dict[str, Any]] = None) -> QuerySet[ModelType]:** This is the equivalent to `Model.objects.all()`. We store it in `cache_key` and we fetch it from cache if queryset was in the cache otherwise sets queryset to the cache.  
+
+	 1. **suffix: Optional[str] = None** : This suffix is added to the end of `cache_key` if provided. It's useful when you want to store a filtered queryset in cache and you also don't want to override your `cache_manager.all()` queryset.  
+
+	 2. **filter_kwargs: Optional[Dict[str, Any]] = None** : If you want to filter your queryset you can use it and pass your filter as a dict. For example `{"name__icontains": "mojix", "is_active": True}` same as Django API. but it's better to use `suffix` and `filter_kwargs` at the same time. Then you can cache your filters when you are using them so much. For example if you have a page that you show all of the active products and you want to cache your active products instead of all of the products. You can do this `product_cache_manager.all(suffix="active", filter_kwargs={"is_active": True})`.    
+
 
 **Notice:** What if you wanted to filter your queryset without caching it? imagine if it was a simple search that you don't want to cache it. Remember that `cache_manager.all()` returns `Queryset[ModelType]`. So you can use everything on it that you do in Django and you can use it even as your model manager. look that this example below:
 
@@ -113,7 +178,20 @@ Now lets look at your model `cache_manager` methods.
 	# It's like Model.objects.all().filter(is_active=True)
 	# So it's not stored in cache and feel free to use it
 	cache_manager.all().filter(is_active=True)
-	
+
+ - **get(unique_identifier: Any, filter_kwargs: Dict[str, Any], raise_exception: bool  =  True)  ->  Optional[ModelType]:** This is the equivalent to `Model.objects.get()`. We store it in `f"{cache_key}_{unique_identifier}"` and we fetch it from cache if object was in the cache otherwise sets the object to the cache.  
+
+	 1. **unique_identifier: Any** We try to get object from cache with `unique_identifier`
+	 2. **filter_kwargs: Dict[str, Any]** If the object was not found we try to get object using `filter_kwargs`. Remember your filters should only return one object. So it's better to use pk, slug , etc.
+	 3. **raise_exception: bool  =  True**  If the object was not found raises `exception_class` if it's True otherwise returns **`None`**.  
+
+```  
+pk = 1
+example_object = cache_manager.get(
+	unique_identifier=pk, 
+	filter_kwargs={"pk": pk},
+)
+```
 
 So far so good and easy.
 More coming soon :)
