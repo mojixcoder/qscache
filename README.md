@@ -49,15 +49,15 @@ in `cache.py`:
 
 	class ExampleCacheManager(BaseCacheManager[Example]):
 	
-		# These are all the options you have but only model is required.
-		model = Example
-		cache_key = "example" 
-		related_objects = ["user"]
-		prefetch_related_objects = ["users"] 
-		use_prefetch_related_for_list = True 
-		list_timeout = 86400  # 1 day
-		detail_timeout = 60  # 1 minute
-		exception_class = Http404
+	    # These are all the options you have but only model is required.
+	    model = Example
+	    cache_key = "example" 
+	    related_objects = ["user"]
+	    prefetch_related_objects = ["users"] 
+	    use_prefetch_related_for_list = True 
+	    list_timeout = 86400  # 1 day
+	    detail_timeout = 60  # 1 minute
+	    exception_class = Http404
 
 	example_cache_manager = ExampleCacheManager()
 	
@@ -74,8 +74,8 @@ This is all you need to do. now you are good to use your cache manager.
     # But later we fetch data from cache until cache is expired
     # It returns an Example instance
 	example_object = example_cache_manager.get(
-		unique_identifier=1,  # pk = 1
-		filter_kwargs={"pk": 1},
+	    unique_identifier=1,  # pk = 1
+	    filter_kwargs={"pk": 1},
 	)
 Now let's see a better example in `rest_framework`:
 
@@ -90,32 +90,32 @@ Now let's see a better example in `rest_framework`:
 
 	class ExampleViewSet(ModelViewSet):
 	
-		serializer_class = ExampleSerializer
-		http_method_names = ["get", "post", "put"]
+	    serializer_class = ExampleSerializer
+	    http_method_names = ["get", "post", "put"]
 
-		def get_queryset(self):  
-		    example_list = example_cache_manager.all()  
-		    return example_list
+	    def get_queryset(self):  
+	        example_list = example_cache_manager.all()  
+		return example_list
 
-		def get_object(self):  
-		    pk = self.kwargs.get(self.lookup_field)  
-		    obj = province_cache_manager.get(
-			    unique_identifier=pk, 	
-			    filter_kwargs={"pk": pk},
-		    )  
-		    self.check_object_permissions(self.request, obj)  
-		    return obj
+	    def get_object(self):  
+		pk = self.kwargs.get(self.lookup_field)  
+		obj = province_cache_manager.get(
+		    unique_identifier=pk, 	
+		    filter_kwargs={"pk": pk},
+	        )  
+		self.check_object_permissions(self.request, obj)  
+		return obj
 		
-		@clear_cache_keys(keys=[example_cache_manager.get_cache_key()])
-		def perform_create(self, serializer):
-			serializer.save()
+	    @clear_cache_keys(keys=[example_cache_manager.get_cache_key()])
+	    def perform_create(self, serializer):
+	        serializer.save()
 
-		@clear_cache_keys(
-			manager=example_cache_manager, 
-			additional_fields=[example_cache_manager.get_cache_key()],
-		)
-		def perform_update(self, serializer): 
-			return serializer.save()
+	    @clear_cache_keys(
+		manager=example_cache_manager, 
+	        additional_fields=[example_cache_manager.get_cache_key()],
+	    )
+	    def perform_update(self, serializer): 
+		return serializer.save()
 	
 Here the queries for our `list` and `retrieve` actions will be cached.
 Now after we create an object we delete our list cache so next time we get our list cache will be updated. And after updating an object we delete our list cache key and the object from cache, so next time when we get our list and object they will be updated and cached again.
@@ -187,8 +187,8 @@ Here are `BaseCacheManager` that you may want to override.
 ```  
 pk = 1
 example_object = cache_manager.get(
-	unique_identifier=pk, 
-	filter_kwargs={"pk": pk},
+    unique_identifier=pk, 
+    filter_kwargs={"pk": pk},
 )
 ```
 
