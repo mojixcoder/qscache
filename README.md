@@ -30,9 +30,9 @@ in `models.py`:
 
 	  
 	class Example(models.Model):  
-		"""Example
-		A simple example Django model like before
-		"""
+	    """Example
+	    A simple example Django model like before
+	    """
 	      
 	    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name="example_user")  
 	    users = models.ManyToManyField(User, related_name="examples")  
