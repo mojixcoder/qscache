@@ -14,6 +14,7 @@ from example_app.models import Example
 from example_app.cache import (
     example_cache_manager,
     example_cache_user_prefetch_related_manager,
+    example_only_cache_manager,
 )
 
 # Create your tests here.
@@ -56,6 +57,18 @@ class ExampleTestCase(TestCase):  # noqa
         self.assertIn(example_cache_manager.get_cache_key(), cache_keys)
         self.assertIsInstance(example_list, QuerySet)
 
+    def test_all_hits_db_only_once(self) -> None:
+        reset_queries()
+        example_list = example_only_cache_manager.all()
+
+        for i in range(10):
+            _ = example_only_cache_manager.all()
+
+        # We have only executed one query
+        # The first time we get our example_list
+        self.assertEqual(len(connection.queries), 1)
+        
+
     def test_get(self) -> None:
         """
         Test if the object is stored in cache
@@ -79,6 +92,29 @@ class ExampleTestCase(TestCase):  # noqa
         self.assertEqual(obj, example_object)
         self.assertIn(detail_cache_key, cache_keys)
         self.assertIsInstance(obj, Example)
+
+    def test_get_hits_db_only_once(self) -> None:
+        example_object = Example(title="MojixCoder", text="Mojix Coder", number=1010)
+        example_object.save()
+
+        reset_queries()
+
+        # Here we get object and store it in cache
+        obj = example_only_cache_manager.get(
+            unique_identifier=example_object.pk,
+            filter_kwargs={"pk": example_object.pk},
+        )
+
+        for i in range(10):
+            obj = example_only_cache_manager.get(
+                unique_identifier=example_object.pk,
+                filter_kwargs={"pk": example_object.pk},
+            )
+            title = obj.title
+        
+        # We have only executed one query
+        # The first time we get our object
+        self.assertEqual(len(connection.queries), 1)
 
     def test_all_with_filter_and_suffix(self) -> None:
         example_object1 = Example.objects.create(
