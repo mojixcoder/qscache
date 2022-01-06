@@ -10,8 +10,9 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Running tests
+      - name: Checkout
         uses: actions/checkout@v2
+      - name: Running tests
         run: |
           cd qscache/
           pip install -r requirements.txt
