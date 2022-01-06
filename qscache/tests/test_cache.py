@@ -58,15 +58,12 @@ class ExampleTestCase(TestCase):  # noqa
         self.assertIsInstance(example_list, QuerySet)
 
     def test_all_hits_db_only_once(self) -> None:
-        reset_queries()
-        example_list = example_only_cache_manager.all()
+        with self.assertNumQueries(1):
+            example_list = example_only_cache_manager.all()
 
-        for i in range(10):
-            _ = example_only_cache_manager.all()
+            for i in range(10):
+                _ = example_only_cache_manager.all()
 
-        # We have only executed one query
-        # The first time we get our example_list
-        self.assertEqual(len(connection.queries), 1)
         
 
     def test_get(self) -> None:
@@ -94,27 +91,23 @@ class ExampleTestCase(TestCase):  # noqa
         self.assertIsInstance(obj, Example)
 
     def test_get_hits_db_only_once(self) -> None:
+        
         example_object = Example(title="MojixCoder", text="Mojix Coder", number=1010)
         example_object.save()
 
-        reset_queries()
-
-        # Here we get object and store it in cache
-        obj = example_only_cache_manager.get(
-            unique_identifier=example_object.pk,
-            filter_kwargs={"pk": example_object.pk},
-        )
-
-        for i in range(10):
+        with self.assertNumQueries(1):
+            # Here we get object and store it in cache
             obj = example_only_cache_manager.get(
                 unique_identifier=example_object.pk,
                 filter_kwargs={"pk": example_object.pk},
             )
-            title = obj.title
-        
-        # We have only executed one query
-        # The first time we get our object
-        self.assertEqual(len(connection.queries), 1)
+
+            for i in range(10):
+                obj = example_only_cache_manager.get(
+                    unique_identifier=example_object.pk,
+                    filter_kwargs={"pk": example_object.pk},
+                )
+                title = obj.title
 
     def test_all_with_filter_and_suffix(self) -> None:
         example_object1 = Example.objects.create(
@@ -200,13 +193,11 @@ class ExampleTestCase(TestCase):  # noqa
 
         obj = example_list.first()
 
-        reset_queries()
+        with self.assertNumQueries(0):
+            # Because we have used select_related on user field so this field shouldn't execute another query
+            first_name = obj.user.first_name
 
-        # Because we have used select_related on user field so this field shouldn't execute another query
-        first_name = obj.user.first_name
-
-        self.assertEqual(first_name, user.first_name)
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
+            self.assertEqual(first_name, user.first_name)
 
     def test_all_prefetch_related(self) -> None:
         user1 = get_user_model().objects.create_user(
@@ -241,12 +232,9 @@ class ExampleTestCase(TestCase):  # noqa
         example_list = example_cache_manager.all()
         obj = example_list.first()
 
-        reset_queries()
-
-        for user in obj.users.all():
-            first_name = user.first_name
-
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
+        with self.assertNumQueries(0):
+            for user in obj.users.all():
+                first_name = user.first_name
 
     def test_all_select_related_and_prefetch_related(self) -> None:
         user1 = get_user_model().objects.create_user(
@@ -280,14 +268,11 @@ class ExampleTestCase(TestCase):  # noqa
         example_list = example_cache_manager.all()
         obj = example_list.first()
 
-        reset_queries()
+        with self.assertNumQueries(0):
+            first_name = obj.user.first_name
 
-        first_name = obj.user.first_name
-
-        for user in obj.users.all():
-            first_name = user.first_name
-
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
+            for user in obj.users.all():
+                first_name = user.first_name
 
     def test_get_select_related(self) -> None:
         user = get_user_model().objects.create_user(
@@ -307,12 +292,10 @@ class ExampleTestCase(TestCase):  # noqa
             filter_kwargs={"pk": example_object.pk},
         )
 
-        reset_queries()
+        with self.assertNumQueries(0):
+            first_name = obj.user.first_name
 
-        first_name = obj.user.first_name
-
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
-        self.assertEqual(first_name, user.first_name)
+            self.assertEqual(first_name, user.first_name)
 
     def test_get_prefetch_related(self) -> None:
         user1 = get_user_model().objects.create_user(
@@ -349,12 +332,9 @@ class ExampleTestCase(TestCase):  # noqa
             filter_kwargs={"pk": example_object.pk},
         )
 
-        reset_queries()
-
-        for user in obj.users.all():
-            first_name = user.first_name
-
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
+        with self.assertNumQueries(0):
+            for user in obj.users.all():
+                first_name = user.first_name
 
     def test_get_select_related_and_prefetch_related(self) -> None:
         user1 = get_user_model().objects.create_user(
@@ -390,14 +370,11 @@ class ExampleTestCase(TestCase):  # noqa
             filter_kwargs={"pk": example_object.pk},
         )
 
-        reset_queries()
+        with self.assertNumQueries(0):
+            first_name = obj.user.first_name
 
-        first_name = obj.user.first_name
-
-        for user in obj.users.all():
-            first_name = user.first_name
-
-        self.assertEqual(len(connection.queries), 0)  # 0 new queries executed
+            for user in obj.users.all():
+                first_name = user.first_name
 
     def test_dont_use_prefetch_related_for_list(self) -> None:
         user1 = get_user_model().objects.create_user(
@@ -430,12 +407,9 @@ class ExampleTestCase(TestCase):  # noqa
             filter_kwargs={"pk": example_object.pk},
         )
 
-        reset_queries()
-
-        for user in obj.users.all():
-            first_name = user.first_name
-
-        self.assertEqual(len(connection.queries), 0)
+        with self.assertNumQueries(0):
+            for user in obj.users.all():
+                first_name = user.first_name
 
     def test_clear_cache_keys_decorator(self) -> None:
         example_list = example_cache_manager.all()
