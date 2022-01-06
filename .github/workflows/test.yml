@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  runner-job:
+  run-tests:
     runs-on: ubuntu-latest
 
     services:
@@ -21,8 +21,6 @@ jobs:
         ports:
           - 6379:6379
 
-  run-tests:
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
