@@ -1,0 +1,18 @@
+name: Running tests
+
+on: 
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Running tests
+        run: |
+          cd qscache/
+          pip install -r requirements.txt
+          python3 manage.py test
+          
